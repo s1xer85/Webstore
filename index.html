@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Strike Kit Manager | Mobile Pro</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --card: #111111;
+            --border: #262626;
+            --text: #ffffff;
+            --text-dim: #888888;
+            --accent: #ffffff;
+            --error: #ff4444;
+            --success: #00ff00;
+            --radius: 12px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding-bottom: 90px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(15px);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            border-top: 1px solid var(--border);
+            z-index: 1000;
+        }
+
+        .nav-item {
+            background: none; border: none; color: var(--text-dim);
+            font-size: 10px; font-weight: bold;
+            display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1;
+        }
+
+        .nav-item.active { color: var(--accent); }
+        .nav-icon { font-size: 22px; }
+
+        /* UI Elements */
+        .header { padding: 20px; background: var(--bg); border-bottom: 1px solid var(--border); text-align: center; position: sticky; top: 0; z-index: 900; }
+        .container { padding: 15px; }
+        section { display: none; animation: fadeIn 0.3s ease; }
+        section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .stat-card { background: var(--card); padding: 15px; border-radius: var(--radius); border: 1px solid var(--border); }
+        .stat-card small { color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-card h2 { font-size: 1.1rem; margin-top: 5px; }
+
+        /* Forms & Inputs */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 5px; text-transform: uppercase; }
+        input, select, textarea {
+            width: 100%; background: #1a1a1a; border: 1px solid var(--border);
+            padding: 12px; color: var(--text); border-radius: 8px; font-size: 16px;
+        }
+        input:focus { border-color: var(--accent); outline: none; }
+
+        .delivery-options {
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 15px;
+        }
+        .delivery-btn {
+            background: #1a1a1a; border: 1px solid var(--border); color: var(--text-dim);
+            padding: 10px 5px; border-radius: 8px; font-size: 10px; cursor: pointer; text-align: center;
+        }
+        .delivery-btn.active { background: #fff; color: #000; border-color: #fff; }
+
+        /* Buttons */
+        .btn {
+            background: var(--accent); color: #000; border: none; padding: 14px;
+            border-radius: 8px; font-weight: 800; width: 100%; font-size: 14px;
+            display: flex; justify-content: center; align-items: center; gap: 8px; text-transform: uppercase;
+        }
+        .btn-outline { background: none; border: 1px solid var(--border); color: #fff; }
+        .btn-danger { color: var(--error); border-color: #441111; }
+
+        /* Cart */
+        .cart-item {
+            background: var(--card); padding: 12px; border-radius: 8px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #fff;
+        }
+
+        /* MEMO OVERLAY - IMPROVED FULL SCREEN */
+        #memo-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: #fff; z-index: 2000; display: none; overflow-y: auto;
+        }
+
+        #memo-content {
+            background: white !important; color: black !important;
+            max-width: 500px; margin: 0 auto; padding: 30px 20px;
+        }
+
+        #memo-content * { color: black !important; border-color: black !important; }
+        .memo-header { text-align: center; border-bottom: 3px solid black; padding-bottom: 15px; margin-bottom: 20px; }
+        .memo-header h1 { font-size: 24px; letter-spacing: 2px; }
+
+        #memo-content table {
+            width: 100%; border-collapse: collapse; margin: 20px 0; border: 2px solid black;
+        }
+        #memo-content th, #memo-content td {
+            border: 1px solid black; padding: 10px 8px; text-align: left; font-size: 13px;
+        }
+        #memo-content th { background: #f0f0f0; }
+
+        .memo-footer { text-align: center; margin-top: 30px; border-top: 1px dashed black; padding-top: 15px; font-size: 12px; }
+
+        /* Stock Alert Badge */
+        .alert-pill { background: #331111; color: #ff4444; padding: 10px; border-radius: 8px; border: 1px solid #551111; margin-bottom: 8px; font-size: 12px; }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; }
+            #memo-overlay { position: relative; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header no-print">
+        <h1 style="font-size: 1.3rem; letter-spacing: 3px; font-weight: 900;">STRIKE KIT</h1>
+    </div>
+
+    <div class="container no-print">
+        
+        <!-- DASHBOARD -->
+        <section id="dashboard" class="active">
+            <h3 style="margin-bottom:15px;">Business Pulse</h3>
+            <div class="stats-grid">
+                <div class="stat-card"><small>Today Orders</small><h2 id="o-today">0</h2></div>
+                <div class="stat-card"><small>Today Sales</small><h2 id="s-today">৳0</h2></div>
+                <div class="stat-card"><small>Month Orders</small><h2 id="o-month">0</h2></div>
+                <div class="stat-card"><small>Month Sales</small><h2 id="s-month">৳0</h2></div>
+                <div class="stat-card" style="grid-column: span 2; text-align: center;">
+                    <small>Yearly Revenue (2026)</small>
+                    <h2 id="s-year" style="font-size: 1.8rem;">৳0</h2>
+                </div>
+            </div>
+            
+            <h3 style="margin-bottom:10px;">Stock Alerts</h3>
+            <div id="stock-alerts"></div>
+        </section>
+
+        <!-- INVENTORY -->
+        <section id="inventory">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h3>Inventory</h3>
+                <button class="btn btn-outline" style="width:auto; padding:5px 15px;" onclick="document.getElementById('p-modal').style.display='block'">+ Add Item</button>
+            </div>
+            <div id="inv-list" style="display:grid; gap:10px;"></div>
+        </section>
+
+        <!-- ORDER BUILDER -->
+        <section id="orders">
+            <h3>New Order Builder</h3>
+            <div class="stat-card" style="margin: 15px 0;">
+                <div class="form-group"><label>Customer Name</label><input type="text" id="c-name" placeholder="Full Name"></div>
+                <div class="form-group"><label>Phone Number</label><input type="tel" id="c-phone" placeholder="017xxxxxxxx"></div>
+                
+                <div class="form-group">
+                    <label>Select Jersey/Item</label>
+                    <select id="p-select" onchange="checkStock()"></select>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label>Size</label>
+                        <select id="p-size" onchange="checkStock()">
+                            <option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Quantity</label><input type="number" id="p-qty" value="1"></div>
+                </div>
+                <p id="live-stock" style="font-size:11px; color:var(--text-dim); margin-bottom:10px;"></p>
+                
+                <label style="display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:15px; color: #aaa;">
+                    <input type="checkbox" id="p-custom" onchange="document.getElementById('custom-fields').style.display = this.checked ? 'block' : 'none'">
+                    Add Printing Name/No (+৳150)
+                </label>
+
+                <div id="custom-fields" style="display:none; margin-bottom:15px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <input type="text" id="p-custom-name" placeholder="Name">
+                        <input type="text" id="p-custom-num" placeholder="Number">
+                    </div>
+                </div>
+
+                <button class="btn" onclick="addToCart()">Add to Order</button>
+            </div>
+
+            <div id="cart-list"></div>
+
+            <div id="checkout-area" style="display:none; margin-top:20px; border-top: 1px solid var(--border); padding-top:20px;">
+                <label>Delivery Method</label>
+                <div class="delivery-options">
+                    <div class="delivery-btn active" id="del-free" onclick="setDelivery('free')">FREE</div>
+                    <div class="delivery-btn" id="del-paid" onclick="setDelivery('paid')">PAID</div>
+                    <div class="delivery-btn" id="del-pickup" onclick="setDelivery('pickup')">PICKUP</div>
+                </div>
+
+                <div id="paid-input-wrap" style="display:none;" class="form-group">
+                    <label>Delivery Charge (৳)</label>
+                    <input type="number" id="c-del-price" value="0" oninput="updateGrandTotalDisplay()">
+                </div>
+
+                <div class="form-group"><label>Advance Paid (৳)</label><input type="number" id="c-paid" value="0" oninput="updateGrandTotalDisplay()"></div>
+                
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <span>Grand Total:</span>
+                    <h2 id="order-total-display">৳0</h2>
+                </div>
+                <button class="btn" style="background:var(--success);" onclick="completeOrder()">Confirm & Print Memo</button>
+            </div>
+        </section>
+
+        <!-- HISTORY -->
+        <section id="history">
+            <h3>Order Archives</h3>
+            <div id="history-list" style="margin-top:15px; display:grid; gap:12px;"></div>
+        </section>
+    </div>
+
+    <!-- MODAL: ADD PRODUCT -->
+    <div id="p-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:3000; padding:20px; overflow-y:auto;">
+        <h3>New Product Entry</h3>
+        <div class="form-group"><label>Product Name</label><input type="text" id="new-p-name"></div>
+        <div class="form-group"><label>Price</label><input type="number" id="new-p-price"></div>
+        <label>Size Stock</label>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:20px;">
+            <div><label>S</label><input type="number" id="ns-s" value="0"></div>
+            <div><label>M</label><input type="number" id="ns-m" value="0"></div>
+            <div><label>L</label><input type="number" id="ns-l" value="0"></div>
+            <div><label>XL</label><input type="number" id="ns-xl" value="0"></div>
+            <div><label>XXL</label><input type="number" id="ns-xxl" value="0"></div>
+        </div>
+        <button class="btn" onclick="saveProduct()">Save Product</button>
+        <button class="btn btn-outline" style="margin-top:10px;" onclick="document.getElementById('p-modal').style.display='none'">Close</button>
+    </div>
+
+    <!-- MEMO VIEW OVERLAY -->
+    <div id="memo-overlay">
+        <div class="no-print" style="padding: 15px; display:flex; gap:10px; background: #eee;">
+            <button class="btn" style="flex:1;" onclick="window.print()">Print / PDF</button>
+            <button class="btn btn-outline" style="flex:1; border-color: #000; color: #000;" onclick="closeMemo()">Done</button>
+        </div>
+        <div id="memo-content">
+            <div class="memo-header">
+                <h1>STRIKE KIT STORE</h1>
+                <p>Authentic Jerseys & Custom Printing</p>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <div>
+                    <p><strong>Customer:</strong> <span id="m-name"></span></p>
+                    <p><strong>Phone:</strong> <span id="m-phone"></span></p>
+                </div>
+                <div style="text-align:right;">
+                    <p><strong>Memo:</strong> #<span id="m-no"></span></p>
+                    <p><strong>Date:</strong> <span id="m-date"></span></p>
+                </div>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>Item</th><th>Size</th><th>Qty</th><th>Total</th></tr>
+                </thead>
+                <tbody id="m-items"></tbody>
+            </table>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px; margin-top:10px; font-weight:bold;">
+                <p>Subtotal: <span id="m-sub"></span></p>
+                <p>Delivery: <span id="m-del"></span></p>
+                <p style="font-size:18px; border-top: 2px solid #000; padding-top:5px;">Grand Total: <span id="m-total"></span></p>
+                <p>Advance: <span id="m-paid"></span></p>
+                <p>Balance Due: <span id="m-bal"></span></p>
+            </div>
+            <div class="memo-footer">
+                <p>Delivery Method: <span id="m-method"></span></p>
+                <p>Thank you for choosing STRIKE KIT!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav no-print">
+        <button class="nav-item active" onclick="nav('dashboard')">
+            <span class="nav-icon">📈</span><span>Dashboard</span>
+        </button>
+        <button class="nav-item" onclick="nav('inventory')">
+            <span class="nav-icon">👕</span><span>Stock</span>
+        </button>
+        <button class="nav-item" onclick="nav('orders')">
+            <span class="nav-icon">📝</span><span>New Order</span>
+        </button>
+        <button class="nav-item" onclick="nav('history')">
+            <span class="nav-icon">📁</span><span>History</span>
+        </button>
+    </div>
+
+    <script>
+        let products = JSON.parse(localStorage.getItem('sk_pro_p')) || [
+            { id: 1, name: "Man United Home 25/26", price: 1200, stock: { S: 12, M: 8, L: 2, XL: 10, XXL: 5 } },
+            { id: 2, name: "Real Madrid Home 25/26", price: 1250, stock: { S: 5, M: 6, L: 5, XL: 4, XXL: 5 } }
+        ];
+        let orders = JSON.parse(localStorage.getItem('sk_pro_o')) || [];
+        let cart = [];
+        let deliveryType = 'free';
+
+        function nav(id) {
+            document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+            if(id === 'dashboard') updateDashboard();
+            if(id === 'inventory') renderInventory();
+            if(id === 'history') renderHistory();
+            if(id === 'orders') populateDropdown();
+        }
+
+        // --- DASHBOARD LOGIC ---
+        function updateDashboard() {
+            const now = new Date();
+            const todayStr = now.toDateString();
+            const thisMonth = now.getMonth();
+            const thisYear = now.getFullYear();
+
+            const todayOrders = orders.filter(o => new Date(o.date).toDateString() === todayStr);
+            const monthOrders = orders.filter(o => {
+                const d = new Date(o.date);
+                return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+            });
+            const yearOrders = orders.filter(o => new Date(o.date).getFullYear() === thisYear);
+
+            document.getElementById('o-today').innerText = todayOrders.length;
+            document.getElementById('s-today').innerText = '৳' + todayOrders.reduce((a, b) => a + b.total, 0);
+            document.getElementById('o-month').innerText = monthOrders.length;
+            document.getElementById('s-month').innerText = '৳' + monthOrders.reduce((a, b) => a + b.total, 0);
+            document.getElementById('s-year').innerText = '৳' + yearOrders.reduce((a, b) => a + b.total, 0);
+
+            const alerts = document.getElementById('stock-alerts');
+            alerts.innerHTML = '';
+            products.forEach(p => {
+                Object.entries(p.stock).forEach(([size, qty]) => {
+                    if(qty < 5) {
+                        alerts.innerHTML += `<div class="alert-pill">⚠️ Low Stock: ${p.name} (Size ${size}) - ${qty} remaining</div>`;
+                    }
+                });
+            });
+        }
+
+        // --- INVENTORY LOGIC ---
+        function renderInventory() {
+            const list = document.getElementById('inv-list');
+            list.innerHTML = products.map(p => `
+                <div class="stat-card">
+                    <p><b>${p.name}</b></p>
+                    <p style="font-size:12px; color: #aaa; margin:5px 0;">
+                        S:${p.stock.S} | M:${p.stock.M} | L:${p.stock.L} | XL:${p.stock.XL} | XXL:${p.stock.XXL}
+                    </p>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>৳${p.price}</span>
+                        <button onclick="deleteProduct(${p.id})" style="background:none; border:none; color:red; font-size:12px;">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+            localStorage.setItem('sk_pro_p', JSON.stringify(products));
+        }
+
+        function saveProduct() {
+            const name = document.getElementById('new-p-name').value;
+            const price = parseInt(document.getElementById('new-p-price').value);
+            if(!name || !price) return alert("Fill all fields");
+            products.push({
+                id: Date.now(), name, price,
+                stock: {
+                    S: parseInt(document.getElementById('ns-s').value||0),
+                    M: parseInt(document.getElementById('ns-m').value||0),
+                    L: parseInt(document.getElementById('ns-l').value||0),
+                    XL: parseInt(document.getElementById('ns-xl').value||0),
+                    XXL: parseInt(document.getElementById('ns-xxl').value||0)
+                }
+            });
+            renderInventory();
+            document.getElementById('p-modal').style.display='none';
+        }
+
+        function deleteProduct(id) {
+            if(confirm("Delete this product?")) {
+                products = products.filter(p => p.id !== id);
+                renderInventory();
+            }
+        }
+
+        // --- ORDER LOGIC ---
+        function populateDropdown() {
+            const sel = document.getElementById('p-select');
+            sel.innerHTML = '<option value="">Select Jersey</option>' + 
+                products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        }
+
+        function checkStock() {
+            const pid = document.getElementById('p-select').value;
+            const size = document.getElementById('p-size').value;
+            if(!pid) return;
+            const p = products.find(x => x.id == pid);
+            document.getElementById('live-stock').innerText = `Live Stock (${size}): ${p.stock[size]} pcs`;
+        }
+
+        function addToCart() {
+            const pid = document.getElementById('p-select').value;
+            const size = document.getElementById('p-size').value;
+            const qty = parseInt(document.getElementById('p-qty').value);
+            if(!pid) return;
+            const p = products.find(x => x.id == pid);
+            if(qty > p.stock[size]) return alert("Not enough stock!");
+
+            const custom = document.getElementById('p-custom').checked;
+            cart.push({
+                pid: p.id, name: p.name, size, qty,
+                price: p.price + (custom ? 150 : 0),
+                print: custom ? `${document.getElementById('p-custom-name').value} (${document.getElementById('p-custom-num').value})` : null
+            });
+            renderCart();
+        }
+
+        function renderCart() {
+            const list = document.getElementById('cart-list');
+            list.innerHTML = cart.map((item, i) => `
+                <div class="cart-item">
+                    <div><b>${item.name}</b><br><small>${item.size} ${item.print ? '| '+item.print : ''}</small></div>
+                    <div style="text-align:right;">৳${item.price * item.qty}<br><span onclick="cart.splice(${i},1);renderCart()" style="color:red; font-size:12px;">Remove</span></div>
+                </div>
+            `).join('');
+            document.getElementById('checkout-area').style.display = cart.length ? 'block' : 'none';
+            updateGrandTotalDisplay();
+        }
+
+        function setDelivery(type) {
+            deliveryType = type;
+            document.querySelectorAll('.delivery-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('del-' + type).classList.add('active');
+            document.getElementById('paid-input-wrap').style.display = type === 'paid' ? 'block' : 'none';
+            updateGrandTotalDisplay();
+        }
+
+        function updateGrandTotalDisplay() {
+            let sub = cart.reduce((a, b) => a + (b.price * b.qty), 0);
+            let del = deliveryType === 'paid' ? parseInt(document.getElementById('c-del-price').value || 0) : 0;
+            document.getElementById('order-total-display').innerText = '৳' + (sub + del);
+        }
+
+        function completeOrder() {
+            const sub = cart.reduce((a, b) => a + (b.price * b.qty), 0);
+            const del = deliveryType === 'paid' ? parseInt(document.getElementById('c-del-price').value || 0) : 0;
+            const paid = parseInt(document.getElementById('c-paid').value || 0);
+            
+            const order = {
+                memoNo: orders.length + 5001,
+                date: new Date().toISOString(),
+                customer: document.getElementById('c-name').value,
+                phone: document.getElementById('c-phone').value,
+                items: [...cart],
+                subtotal: sub,
+                delivery: del,
+                deliveryMethod: deliveryType.toUpperCase(),
+                total: sub + del,
+                paid: paid,
+                status: cart.some(i => i.print) ? 'Printing' : 'Ready'
+            };
+
+            cart.forEach(item => { products.find(p => p.id == item.pid).stock[item.size] -= item.qty; });
+            orders.push(order);
+            localStorage.setItem('sk_pro_o', JSON.stringify(orders));
+            localStorage.setItem('sk_pro_p', JSON.stringify(products));
+            
+            cart = []; 
+            renderCart();
+            showMemo(order);
+        }
+
+        // --- HISTORY & MEMO ---
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = orders.slice().reverse().map(o => `
+                <div class="stat-card">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <b>${o.customer}</b><br><small>#${o.memoNo} | ${new Date(o.date).toLocaleDateString()}</small>
+                        </div>
+                        <span style="font-size:10px; padding:2px 6px; background:#fff; color:#000; border-radius:4px; font-weight:bold;">${o.status}</span>
+                    </div>
+                    <p style="margin:8px 0; font-size:14px;">Total: ৳${o.total} | Paid: ৳${o.paid}</p>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-outline" style="padding:6px; font-size:11px;" onclick="showMemoByNo(${o.memoNo})">View Memo</button>
+                        <button class="btn btn-outline btn-danger" style="padding:6px; font-size:11px; border:none;" onclick="deleteOrder(${o.memoNo})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteOrder(no) {
+            if(confirm("Delete this order record?")) {
+                orders = orders.filter(o => o.memoNo !== no);
+                localStorage.setItem('sk_pro_o', JSON.stringify(orders));
+                renderHistory();
+            }
+        }
+
+        function showMemoByNo(no) { showMemo(orders.find(o => o.memoNo == no)); }
+        
+        function showMemo(o) {
+            document.getElementById('m-name').innerText = o.customer;
+            document.getElementById('m-phone').innerText = o.phone;
+            document.getElementById('m-no').innerText = o.memoNo;
+            document.getElementById('m-date').innerText = new Date(o.date).toLocaleDateString();
+            document.getElementById('m-items').innerHTML = o.items.map(i => `
+                <tr><td>${i.name}${i.print ? '<br><small>Print: '+i.print+'</small>' : ''}</td><td>${i.size}</td><td>${i.qty}</td><td>৳${i.price * i.qty}</td></tr>
+            `).join('');
+            document.getElementById('m-sub').innerText = '৳' + o.subtotal;
+            document.getElementById('m-del').innerText = '৳' + o.delivery;
+            document.getElementById('m-total').innerText = '৳' + o.total;
+            document.getElementById('m-paid').innerText = '৳' + o.paid;
+            document.getElementById('m-bal').innerText = '৳' + (o.total - o.paid);
+            document.getElementById('m-method').innerText = o.deliveryMethod;
+            document.getElementById('memo-overlay').style.display = 'block';
+        }
+
+        function closeMemo() {
+            document.getElementById('memo-overlay').style.display = 'none';
+            nav('dashboard');
+        }
+
+        // App Boot
+        updateDashboard();
+    </script>
+</body>
+</html>
